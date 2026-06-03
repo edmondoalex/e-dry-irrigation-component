@@ -6,3 +6,4 @@
 - Copiati solo i sorgenti attivi da `config/custom_components/e-dry_irrigation`.
 - Rinominata la cartella installabile in `custom_components/e_dry`, coerente con `manifest.json` e `const.py`.
 - Aggiunti README, CHANGELOG e `.gitignore`.
+- Aggiunto `hacs.json` con dominio `e_dry`.

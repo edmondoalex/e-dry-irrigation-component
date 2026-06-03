@@ -5,3 +5,4 @@
 - Prima pubblicazione Git del custom component `e_dry`.
 - Normalizzata la struttura installabile in `custom_components/e_dry/`.
 - Esclusi backup locali, zip, log, cache Python e file temporanei.
+- Aggiunto `hacs.json` per supportare l'uso come custom repository HACS.
