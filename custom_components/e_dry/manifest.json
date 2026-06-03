@@ -1,0 +1,12 @@
+{
+  "domain": "e_dry",
+  "name": "e-dry Irrigation",
+  "version": "0.1.0",
+  "documentation": "https://github.com/edmondoalex/e-dry-irrigation-component",
+  "requirements": [],
+  "codeowners": [
+    "@edmondoalex"
+  ],
+  "config_flow": true,
+  "iot_class": "local_push"
+}

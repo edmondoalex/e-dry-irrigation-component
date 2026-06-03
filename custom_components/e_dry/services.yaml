@@ -1,0 +1,124 @@
+start_zone:
+  name: Start zone (base duration)
+  description: Avvia una zona usando la durata base.
+  fields:
+    zone_id:
+      name: Zona
+      required: true
+
+start_zone_for:
+  name: Start zone for minutes
+  description: Avvia una zona per un certo numero di minuti.
+  fields:
+    zone_id:
+      name: Zona
+      required: true
+    minutes:
+      name: Minuti
+      required: true
+
+stop_zone:
+  name: Stop zone
+  description: Ferma l'irrigazione di una zona.
+  fields:
+    zone_id:
+      name: Zona
+      required: true
+
+update_zone:
+  name: Update Zone
+  description: Modifica il nome o la durata base di una zona.
+  fields:
+    zone_id:
+      name: Zona
+      description: Seleziona lo switch della zona da modificare.
+      required: true
+      selector:
+        entity:
+          domain: switch
+          multiple: false
+    name:
+      name: Nuovo Nome
+      description: Il nuovo nome da assegnare alla zona.
+      required: false
+      selector:
+        text:
+    base_minutes:
+      name: Durata Base
+      description: La nuova durata base in minuti.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+
+update_program:
+  name: Update Program
+  description: Crea, modifica o elimina un programma di irrigazione.
+  fields:
+    program_id:
+      name: ID Programma
+      description: ID del programma da modificare. Se 0 o non trovato, ne crea uno nuovo.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+    name:
+      name: Nome
+      description: Nome del programma.
+      required: false
+      selector:
+        text:
+    time:
+      name: Orario
+      description: Orario di avvio (HH:MM).
+      required: false
+      selector:
+        time:
+    days:
+      name: Giorni
+      description: Lista dei giorni (mon, tue, wed, thu, fri, sat, sun).
+      required: false
+      selector:
+        select:
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+          multiple: true
+    zones:
+      name: Zone
+      description: Seleziona gli switch delle zone (es. switch.zona_1) oppure inserisci gli ID separati da virgola.
+      required: false
+      selector:
+        entity:
+          domain: switch
+          multiple: true
+    pause_minutes:
+      name: Pausa
+      description: Minuti di pausa tra le zone.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 0.5
+    enabled:
+      name: Abilitato
+      description: Abilita o disabilita il programma.
+      required: false
+      selector:
+        boolean:
+    delete_program:
+      name: Elimina
+      description: Se vero, elimina il programma specificato.
+      required: false
+      selector:
+        boolean:
+
