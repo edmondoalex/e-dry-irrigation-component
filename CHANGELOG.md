@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.0.5 - 2026-06-03
+
+- Ripristinati `icon.png` e `logo.png` nel custom component per il brand e-Dry in Home Assistant/HACS.
+- Bump versione component a `10.0.5`.
+
 ## 10.0.4 - 2026-06-03
 
 - Meteo professionale: il component legge in background e-SunMind `GET /api/weather/irrigation` come fonte primaria.
