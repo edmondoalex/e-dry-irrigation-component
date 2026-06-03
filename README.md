@@ -1,10 +1,12 @@
 # e-Dry Irrigation custom component
 
+![e-Dry Irrigation](docs/assets/e-dry-irrigation.png)
+
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
-Versione corrente: `10.0.5`.
+Versione corrente: `10.0.6`.
 
-Il component include `custom_components/e_dry/icon.png` e `custom_components/e_dry/logo.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS.
+Il component include `icon.png`, `logo.png`, `brand/` e `docs/assets/e-dry-irrigation.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS.
 
 ## Installazione manuale
 

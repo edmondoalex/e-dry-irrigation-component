@@ -1,5 +1,11 @@
 # Changelog
 
+## 10.0.6 - 2026-06-03
+
+- Allineata gestione immagine al modello `e-Tende Intelligenti`: aggiunti asset in root, `docs/assets/` e `custom_components/e_dry/brand/`.
+- README aggiornato con immagine e-Dry in apertura.
+- Bump versione component a `10.0.6`.
+
 ## 10.0.5 - 2026-06-03
 
 - Ripristinati `icon.png` e `logo.png` nel custom component per il brand e-Dry in Home Assistant/HACS.

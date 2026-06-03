@@ -13,3 +13,4 @@
 - Bump component a `10.0.3` per allineamento release con add-on e-Dry `10.0.3`.
 - Bump component a `10.0.4`: aggiunta cache meteo e-SunMind `/api/weather/irrigation`, blocchi professionali e SmartCalc evoluto con ET0/pioggia/forecast/score.
 - Bump component a `10.0.5`: ripristinati `icon.png` e `logo.png` del brand e-Dry nel custom component.
+- Bump component a `10.0.6`: replicata struttura immagini di `e-Tende Intelligenti` con asset root, `docs/assets/` e `custom_components/e_dry/brand/`.
