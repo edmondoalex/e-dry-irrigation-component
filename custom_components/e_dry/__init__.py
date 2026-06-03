@@ -123,6 +123,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, "update_weather_settings", handle_update_weather_settings)
 
+    async def handle_update_zone_profiles(call: ServiceCall) -> None:
+        await controller.update_zone_profiles(dict(call.data))
+
+    hass.services.async_register(DOMAIN, "update_zone_profiles", handle_update_zone_profiles)
+
     async def handle_remove_stale_entities(call: ServiceCall) -> None:
         """Remove stale entities for this config entry matching a substring.
 

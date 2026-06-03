@@ -245,11 +245,17 @@ class EDry2ZonesInfoSensor(EDry2Sensor):
             zid = int(z.get("id"))
             base = float(z.get("base_minutes", 0.0))
             configured = float(self._controller.get_zone_duration(zid) or 0.0)
+            profile = self._controller._zone_profile(z)
+            try:
+                profile_multiplier = float(profile.get("smart_multiplier", 1.0))
+            except (TypeError, ValueError):
+                profile_multiplier = 1.0
             # If zone ignores weather, smart duration == configured (no smart applied)
             zone_ignores = bool(z.get("ignore_weather", False))
-            smart_d = round(configured * (1.0 if zone_ignores else smart_factor), 1)
+            smart_multiplier = 1.0 if zone_ignores else smart_factor * profile_multiplier
+            smart_d = round(configured * smart_multiplier, 1)
             # Effective duration: always apply manual factor; apply smart only if not ignored
-            zone_smart = 1.0 if zone_ignores else smart_factor
+            zone_smart = smart_multiplier
             effective_d = round(configured * manual_factor * zone_smart, 1)
             end_ts = z.get("end_ts")
             remaining = None
@@ -270,6 +276,10 @@ class EDry2ZonesInfoSensor(EDry2Sensor):
                 "configured_duration": configured,
                 "smart_duration": smart_d,
                 "effective_duration": effective_d,
+                "profile_id": str(z.get("profile_id") or "standard"),
+                "profile_name": profile.get("name"),
+                "profile_smart_multiplier": profile_multiplier,
+                "profile_wind_sensitive": bool(profile.get("wind_sensitive", True)),
                 "ignore_weather": bool(z.get("ignore_weather", False)),
                 "active": bool(z.get("active", False)),
                 "end_ts": z.get("end_ts"),
@@ -278,7 +288,12 @@ class EDry2ZonesInfoSensor(EDry2Sensor):
 
         # also include enabled programs summary for convenience
         enabled_programs = [int(p.get("id")) for p in (self._controller.programs or []) if p.get("enabled")]
-        return {"zones": zones_out, "programmi_abilitati": enabled_programs, "programmi_abilitati_count": len(enabled_programs)}
+        return {
+            "zones": zones_out,
+            "zone_profiles": self._controller.get_zone_profiles(),
+            "programmi_abilitati": enabled_programs,
+            "programmi_abilitati_count": len(enabled_programs),
+        }
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -1093,6 +1108,5 @@ class EDry2YearlyHistorySensor(EDry2HistorySensor):
     async def _check_reset(self, now):
         if now.day == 1 and now.month == 1:
             await self._reset()
-
 
 

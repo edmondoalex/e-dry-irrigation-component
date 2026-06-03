@@ -52,6 +52,23 @@ update_zone:
           min: 1
           max: 60
           step: 1
+    profile_id:
+      name: Preset zona
+      description: Preset comportamento zona da applicare a SmartCalc.
+      required: false
+      selector:
+        text:
+
+update_zone_profiles:
+  name: Aggiorna preset zone
+  description: Salva i preset custom persistenti usati dalle zone.
+  fields:
+    profiles:
+      name: Preset custom
+      description: Lista di preset custom con id, name, smart_multiplier e wind_sensitive.
+      required: true
+      selector:
+        object:
 
 update_program:
   name: Update Program

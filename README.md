@@ -4,7 +4,7 @@
 
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
-Versione corrente: `10.0.8`.
+Versione corrente: `10.0.9`.
 
 Il component include `icon.png`, `logo.png`, `brand/` e `docs/assets/e-dry-irrigation.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS.
 
@@ -85,6 +85,52 @@ durata_finale = durata_base * regolazione_manuale * smart_factor
 - `irrigation_weather_score`: modula la durata in base allo score meteo di e-SunMind.
 
 Il fattore e limitato tra `0.0` e `2.5`, quindi la centralina non supera il 250% della durata base.
+
+### Preset zona 10.0.9
+
+Ogni zona puo avere un preset comportamento. Il preset non cambia la durata base della zona, ma applica un moltiplicatore al risultato SmartCalc:
+
+```text
+durata_finale = durata_base * regolazione_manuale * smart_factor_meteo * moltiplicatore_preset
+```
+
+Preset integrati:
+
+- `standard`: 1.00, comportamento neutro;
+- `erba`: 1.15, utile per prato;
+- `fiori`: 1.05, utile per aiuole e fioriere;
+- `piante`: 0.90, utile per siepi e piante stabilizzate;
+- `orto`: 1.20, utile per orto e colture piu assetate;
+- `vasi`: 1.30, utile per vasi esposti;
+- `alberi`: 0.75, utile per alberi o irrigazioni meno frequenti.
+
+I preset custom sono salvati nelle opzioni del config entry Home Assistant tramite il servizio `e_dry.update_zone_profiles`. Anche l'assegnazione del preset alla singola zona viene salvata in modo persistente dentro la lista `zones`, quindi resta dopo restart di Home Assistant e dell'add-on.
+
+Il sensore `sensor.e_dry_zones_info` espone:
+
+- `zone_profiles`: preset disponibili, integrati e custom;
+- per ogni zona: `profile_id`, `profile_name`, `profile_smart_multiplier`, `smart_duration` ed `effective_duration`.
+
+Esempio servizio per assegnare un preset:
+
+```yaml
+service: e_dry.update_zone
+data:
+  zone_id: 1
+  profile_id: erba
+```
+
+Esempio servizio per salvare preset custom:
+
+```yaml
+service: e_dry.update_zone_profiles
+data:
+  profiles:
+    - id: "agrumi"
+      name: "Agrumi"
+      smart_multiplier: 1.10
+      wind_sensitive: false
+```
 
 ### Opzioni consigliate
 

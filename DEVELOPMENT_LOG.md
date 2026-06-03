@@ -16,3 +16,4 @@
 - Bump component a `10.0.6`: replicata struttura immagini di `e-Tende Intelligenti` con asset root, `docs/assets/` e `custom_components/e_dry/brand/`.
 - Bump component a `10.0.7`: aggiunte traduzioni `strings.json` e `translations/it.json` per rendere leggibili le opzioni meteo/SmartCalc in Home Assistant.
 - Bump component a `10.0.8`: aggiunto servizio `e_dry.update_weather_settings` per permettere all'add-on di modificare tarature meteo e SmartCalc.
+- Bump component a `10.0.9`: aggiunti preset zona integrati/custom persistenti, assegnazione `profile_id` per zona e moltiplicatore SmartCalc per comportamento zona.

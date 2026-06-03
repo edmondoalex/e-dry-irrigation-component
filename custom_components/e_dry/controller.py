@@ -32,6 +32,16 @@ DEFAULT_ZONE_MINUTES = 10.0
 MASTER_POST_SECONDS = 3
 DEFAULT_ESUNMIND_IRRIGATION_URL = "http://192.168.3.24:1980/api/weather/irrigation"
 
+BUILTIN_ZONE_PROFILES: Dict[str, Dict[str, Any]] = {
+    "standard": {"id": "standard", "name": "Standard", "smart_multiplier": 1.0, "wind_sensitive": True},
+    "erba": {"id": "erba", "name": "Erba / prato", "smart_multiplier": 1.15, "wind_sensitive": True},
+    "fiori": {"id": "fiori", "name": "Fiori / aiuole", "smart_multiplier": 1.05, "wind_sensitive": True},
+    "piante": {"id": "piante", "name": "Piante / siepi", "smart_multiplier": 0.90, "wind_sensitive": False},
+    "orto": {"id": "orto", "name": "Orto", "smart_multiplier": 1.20, "wind_sensitive": False},
+    "vasi": {"id": "vasi", "name": "Vasi", "smart_multiplier": 1.30, "wind_sensitive": False},
+    "alberi": {"id": "alberi", "name": "Alberi", "smart_multiplier": 0.75, "wind_sensitive": False},
+}
+
 WEEKDAY_MAP: Dict[str, int] = {
     "mon": 0,
     "tue": 1,
@@ -216,6 +226,7 @@ class EDry2Controller:
         self._weather_max_age_seconds = float(self._options.get("weather_max_age_seconds") or 900.0)
         self._forecast_rain_skip_mm = float(self._options.get("forecast_rain_skip_mm") or 6.0)
         self._recent_rain_skip_mm = float(self._options.get("recent_rain_skip_mm") or 4.0)
+        self._custom_zone_profiles = self._normalize_custom_profiles(self._options.get("custom_zone_profiles") or [])
         
         # Manual adjustment (default 100%)
         # We don't load this from options because it's a runtime state managed by a NumberEntity
@@ -236,6 +247,7 @@ class EDry2Controller:
                 "switch_entity_id": item.get("switch_entity_id"),
                 "base_minutes": float(item.get("base_minutes", 10)),
                 "ignore_weather": bool(item.get("ignore_weather", False)),
+                "profile_id": str(item.get("profile_id") or "standard"),
                 "active": False,
                 "cancel": None,
                 "end_ts": None,
@@ -342,6 +354,49 @@ class EDry2Controller:
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:
         return max(low, min(high, value))
+
+    def _normalize_custom_profiles(self, profiles: Any) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        if not isinstance(profiles, list):
+            return out
+        for item in profiles:
+            if not isinstance(item, dict):
+                continue
+            raw_id = str(item.get("id") or item.get("name") or "").strip().lower()
+            profile_id = "".join(ch if ch.isalnum() else "_" for ch in raw_id).strip("_")
+            if not profile_id or profile_id in BUILTIN_ZONE_PROFILES:
+                continue
+            name = str(item.get("name") or profile_id).strip()
+            try:
+                mult = float(item.get("smart_multiplier", 1.0))
+            except (TypeError, ValueError):
+                mult = 1.0
+            out.append({
+                "id": profile_id,
+                "name": name,
+                "smart_multiplier": self._clamp(mult, 0.2, 2.5),
+                "wind_sensitive": bool(item.get("wind_sensitive", True)),
+            })
+        return out
+
+    def get_zone_profiles(self) -> List[Dict[str, Any]]:
+        profiles = [dict(p) for p in BUILTIN_ZONE_PROFILES.values()]
+        profiles.extend(dict(p) for p in self._custom_zone_profiles)
+        return profiles
+
+    def _zone_profile(self, zone: Dict[str, Any] | None) -> Dict[str, Any]:
+        profile_id = str((zone or {}).get("profile_id") or "standard")
+        for profile in self.get_zone_profiles():
+            if str(profile.get("id")) == profile_id:
+                return profile
+        return dict(BUILTIN_ZONE_PROFILES["standard"])
+
+    def _profile_smart_multiplier(self, zone: Dict[str, Any] | None) -> float:
+        profile = self._zone_profile(zone)
+        try:
+            return self._clamp(float(profile.get("smart_multiplier", 1.0)), 0.2, 2.5)
+        except (TypeError, ValueError):
+            return 1.0
 
     async def _handle_weather_refresh_tick(self, now: datetime) -> None:
         await self.async_refresh_irrigation_weather()
@@ -1043,6 +1098,13 @@ class EDry2Controller:
                 zone["ignore_weather"] = new_val
                 changed = True
 
+        if "profile_id" in data:
+            profile_id = str(data.get("profile_id") or "standard").strip()
+            valid_profile_ids = {str(p.get("id")) for p in self.get_zone_profiles()}
+            if profile_id in valid_profile_ids and zone.get("profile_id") != profile_id:
+                zone["profile_id"] = profile_id
+                changed = True
+
         if changed:
             # Update options list
             zones_list = []
@@ -1053,6 +1115,7 @@ class EDry2Controller:
                     "switch_entity_id": z.get("switch_entity_id"),
                     "base_minutes": z.get("base_minutes", 10.0),
                     "ignore_weather": bool(z.get("ignore_weather", False)),
+                    "profile_id": str(z.get("profile_id") or "standard"),
                 })
             self._options["zones"] = zones_list
             
@@ -1067,7 +1130,7 @@ class EDry2Controller:
             )
 
             try:
-                applied = {k: data.get(k) for k in ("name", "base_minutes", "ignore_weather") if k in data}
+                applied = {k: data.get(k) for k in ("name", "base_minutes", "ignore_weather", "profile_id") if k in data}
                 zname = zone.get("name")
                 self.log_event("zone_update", f"Zone {zid} updated", {"zone_name": zname, "changes": applied})
             except Exception:
@@ -1237,6 +1300,27 @@ class EDry2Controller:
             _LOGGER.debug("update_weather_settings: failed to log event")
         async_dispatcher_send(self._hass, f"{DOMAIN}_weather_updated_{self._entry.entry_id}", applied)
         return applied
+
+    async def update_zone_profiles(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Persist custom zone profiles for SmartCalc per-zone behavior."""
+        profiles = self._normalize_custom_profiles(data.get("profiles") or [])
+        self._options["custom_zone_profiles"] = profiles
+        try:
+            self._hass.config_entries.async_update_entry(self._entry, options=self._options)
+        except Exception:
+            _LOGGER.exception("update_zone_profiles: failed to persist options")
+
+        self.reload_options(self._options)
+        try:
+            self.log_event(
+                "zone_profiles_update",
+                "Preset zone aggiornati",
+                {"custom_profiles": profiles},
+            )
+        except Exception:
+            _LOGGER.debug("update_zone_profiles: failed to log event")
+        async_dispatcher_send(self._hass, f"{DOMAIN}_zone_updated_{self._entry.entry_id}", True)
+        return profiles
 
     async def stop_program(self, program_id: int) -> None:
         """Stop (cancel) a single program if it's running.
@@ -1490,7 +1574,9 @@ class EDry2Controller:
 
             # Determine per-zone factor: always apply manual adjustment;
             # apply smart/weather factor only if zone does NOT ignore weather.
-            zone_smart = smart_factor_global if not zone.get("ignore_weather") else 1.0
+            profile = self._zone_profile(zone)
+            profile_multiplier = self._profile_smart_multiplier(zone)
+            zone_smart = smart_factor_global * profile_multiplier if not zone.get("ignore_weather") else 1.0
             total_factor = manual_factor * zone_smart
 
             # Apply adjustment
@@ -1505,6 +1591,10 @@ class EDry2Controller:
                         "base_minutes": base_d,
                         "manual_factor": manual_factor,
                         "smart_factor_applied": zone_smart,
+                        "global_smart_factor": smart_factor_global,
+                        "profile_id": profile.get("id"),
+                        "profile_name": profile.get("name"),
+                        "profile_smart_multiplier": profile_multiplier,
                         "effective_minutes": d,
                         "ignore_weather": bool(zone.get("ignore_weather")),
                     },
@@ -1556,7 +1646,8 @@ class EDry2Controller:
 
                 # Determine per-zone factor: always apply manual adjustment;
                 # apply smart/weather factor only if zone does NOT ignore weather.
-                zone_smart = smart_factor_global if not zone.get("ignore_weather") else 1.0
+                profile_multiplier = self._profile_smart_multiplier(zone)
+                zone_smart = smart_factor_global * profile_multiplier if not zone.get("ignore_weather") else 1.0
                 total_factor = manual_factor * zone_smart
 
                 # Apply Adjustment Factor

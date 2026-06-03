@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.0.9 - 2026-06-03
+
+- Aggiunti preset comportamento zona integrati: `standard`, `erba`, `fiori`, `piante`, `orto`, `vasi`, `alberi`.
+- Aggiunto supporto preset custom persistenti tramite servizio `e_dry.update_zone_profiles`.
+- `e_dry.update_zone` ora puo salvare `profile_id` per ogni zona in modo persistente.
+- SmartCalc applica il moltiplicatore del preset alla durata smart della singola zona.
+- `sensor.e_dry_zones_info` espone preset disponibili e dettaglio preset per ogni zona.
+- README aggiornato con funzionamento, esempi servizi e persistenza.
+
 ## 10.0.8 - 2026-06-03
 
 - Aggiunto servizio `e_dry.update_weather_settings` per modificare tarature meteo/SmartCalc da add-on o automazioni.
