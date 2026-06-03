@@ -1,0 +1,41 @@
+{
+  "title": "e-Dry Irrigazione",
+  "config": {
+    "step": {
+      "user": {
+        "title": "e-Dry Irrigazione",
+        "description": "Configura la centralina irrigazione e-Dry."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni e-Dry",
+        "description": "Scegli quale parte della centralina irrigazione configurare.",
+        "data": {
+          "choice": "Sezione"
+        }
+      },
+      "general": {
+        "title": "Impostazioni generali, pompa e meteo",
+        "description": "Configura valvola master, fonte meteo e-SunMind, soglie di sicurezza e SmartCalc.",
+        "data": {
+          "master_switch_entity_id": "Switch valvola master / pompa",
+          "rain_sensor_entity_id": "Sensore pioggia fallback",
+          "rain_threshold": "Soglia pioggia fallback (mm)",
+          "temp_sensor_entity_id": "Sensore temperatura fallback",
+          "min_temp": "Temperatura blocco gelo (C)",
+          "humidity_sensor_entity_id": "Sensore umidita fallback",
+          "wind_sensor_entity_id": "Sensore vento fallback",
+          "wind_threshold": "Soglia blocco vento (km/h)",
+          "enable_smart_calc": "Abilita SmartCalc",
+          "esunmind_weather_api_url": "Endpoint meteo irrigazione e-SunMind",
+          "weather_max_age_seconds": "Eta massima dato meteo (secondi)",
+          "forecast_rain_skip_mm": "Soglia salto per pioggia prevista 24h (mm)",
+          "recent_rain_skip_mm": "Soglia salto per pioggia ultime 24h (mm)"
+        }
+      }
+    }
+  }
+}

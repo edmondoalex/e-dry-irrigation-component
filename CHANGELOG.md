@@ -1,5 +1,17 @@
 # Changelog
 
+## 10.0.8 - 2026-06-03
+
+- Aggiunto servizio `e_dry.update_weather_settings` per modificare tarature meteo/SmartCalc da add-on o automazioni.
+- Documentato il servizio in `services.yaml`.
+- Bump versione component a `10.0.8`.
+
+## 10.0.7 - 2026-06-03
+
+- Aggiunti `strings.json` e `translations/it.json` per mostrare nomi leggibili nelle opzioni Home Assistant.
+- Le tarature meteo e SmartCalc non appaiono piu solo come chiavi tecniche (`forecast_rain_skip_mm`, ecc.).
+- Bump versione component a `10.0.7`.
+
 ## 10.0.6 - 2026-06-03
 
 - Allineata gestione immagine al modello `e-Tende Intelligenti`: aggiunti asset in root, `docs/assets/` e `custom_components/e_dry/brand/`.

@@ -1,0 +1,41 @@
+{
+  "title": "e-Dry Irrigation",
+  "config": {
+    "step": {
+      "user": {
+        "title": "e-Dry Irrigation",
+        "description": "Configure the e-Dry irrigation controller."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "e-Dry options",
+        "description": "Choose which part of the irrigation controller to configure.",
+        "data": {
+          "choice": "Section"
+        }
+      },
+      "general": {
+        "title": "General settings, pump and weather",
+        "description": "Configure the master valve, e-SunMind weather source, safety thresholds and SmartCalc.",
+        "data": {
+          "master_switch_entity_id": "Master valve / pump switch",
+          "rain_sensor_entity_id": "Fallback rain sensor",
+          "rain_threshold": "Fallback rain threshold (mm)",
+          "temp_sensor_entity_id": "Fallback temperature sensor",
+          "min_temp": "Freeze block temperature (C)",
+          "humidity_sensor_entity_id": "Fallback humidity sensor",
+          "wind_sensor_entity_id": "Fallback wind sensor",
+          "wind_threshold": "Wind block threshold (km/h)",
+          "enable_smart_calc": "Enable SmartCalc",
+          "esunmind_weather_api_url": "e-SunMind irrigation weather endpoint",
+          "weather_max_age_seconds": "Maximum weather data age (seconds)",
+          "forecast_rain_skip_mm": "Forecast rain skip threshold in 24h (mm)",
+          "recent_rain_skip_mm": "Recent rain skip threshold in 24h (mm)"
+        }
+      }
+    }
+  }
+}

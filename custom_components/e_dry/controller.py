@@ -1180,6 +1180,64 @@ class EDry2Controller:
         except Exception:
             _LOGGER.exception("set_programs_enabled: error handling running program for %s", program_id)
 
+    async def update_weather_settings(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update weather and SmartCalc options from service/add-on UI."""
+        allowed = {
+            "rain_sensor_entity_id",
+            "rain_threshold",
+            "temp_sensor_entity_id",
+            "min_temp",
+            "humidity_sensor_entity_id",
+            "wind_sensor_entity_id",
+            "wind_threshold",
+            "enable_smart_calc",
+            "esunmind_weather_api_url",
+            "weather_max_age_seconds",
+            "forecast_rain_skip_mm",
+            "recent_rain_skip_mm",
+        }
+        numeric_keys = {
+            "rain_threshold",
+            "min_temp",
+            "wind_threshold",
+            "weather_max_age_seconds",
+            "forecast_rain_skip_mm",
+            "recent_rain_skip_mm",
+        }
+        applied: Dict[str, Any] = {}
+        for key in allowed:
+            if key not in data:
+                continue
+            value = data.get(key)
+            if key == "enable_smart_calc":
+                value = bool(value)
+            elif key in numeric_keys:
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    continue
+            elif value is not None:
+                value = str(value).strip()
+            self._options[key] = value
+            applied[key] = value
+
+        if not applied:
+            return {}
+
+        try:
+            self._hass.config_entries.async_update_entry(self._entry, options=self._options)
+        except Exception:
+            _LOGGER.exception("update_weather_settings: failed to persist options")
+
+        self.reload_options(self._options)
+        await self.async_refresh_irrigation_weather()
+        try:
+            self.log_event("weather_settings", "Tarature meteo aggiornate", applied)
+        except Exception:
+            _LOGGER.debug("update_weather_settings: failed to log event")
+        async_dispatcher_send(self._hass, f"{DOMAIN}_weather_updated_{self._entry.entry_id}", applied)
+        return applied
+
     async def stop_program(self, program_id: int) -> None:
         """Stop (cancel) a single program if it's running.
 
