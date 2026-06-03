@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.0.3 - 2026-06-03
+
+- Bump versione custom component a `10.0.3` per allineamento con add-on e-Dry `10.0.3`.
+- Nessuna modifica funzionale: la logica meteo component resta sui sensori e-SunMind configurabili.
+
 ## 10.0.2 - 2026-06-03
 
 - Smart calc e blocchi meteo usano di default i sensori e-SunMind `sensor.e_sunmind_weather_*`.

@@ -10,3 +10,4 @@
 - Check globale: bump a `10.0.1` e completata la documentazione dei servizi registrati.
 - Meteo smart calc migrato ai sensori e-SunMind di default; vento e-SunMind in `m/s` convertito a `km/h` per la soglia esistente.
 - Opzioni component aggiornate per mostrare i sensori e-SunMind come default di taratura.
+- Bump component a `10.0.3` per allineamento release con add-on e-Dry `10.0.3`.

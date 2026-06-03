@@ -2,6 +2,8 @@
 
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
+Versione corrente: `10.0.3`.
+
 ## Installazione manuale
 
 1. Copia la cartella `custom_components/e_dry` dentro la cartella `config/custom_components/` di Home Assistant.
