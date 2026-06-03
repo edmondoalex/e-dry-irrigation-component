@@ -164,12 +164,19 @@ class EDry2WeatherInfoSensor(EDry2Sensor):
     def extra_state_attributes(self) -> Dict[str, Any]:
         ok, reason = self._controller.get_weather_status_info()
         smart_factor, smart_reason = self._controller.get_smart_calc_info()
+        irrigation_weather = self._controller._get_irrigation_weather_payload()
         # include list/count of enabled programs for convenience (Italian key 'programmi_abilitati')
         enabled_programs = [int(p.get("id")) for p in (self._controller.programs or []) if p.get("enabled")]
-        return {
+        attrs = {
             "status": "OK" if ok else "BLOCCATO",
             "reason": reason,
             "is_blocking": not ok,
+            "weather_mode": "e_sunmind_irrigation_api" if irrigation_weather else "legacy_ha_sensors",
+            "esunmind_weather_api_url": self._controller._esunmind_weather_api_url,
+            "weather_max_age_seconds": float(self._controller._weather_max_age_seconds or 0.0),
+            "forecast_rain_skip_mm": float(self._controller._forecast_rain_skip_mm or 0.0),
+            "recent_rain_skip_mm": float(self._controller._recent_rain_skip_mm or 0.0),
+            "weather_api_error": self._controller._irrigation_weather_error,
             "rain_sensor": self._controller._rain_sensor,
             "rain_threshold": float(self._controller._rain_threshold or 0.0),
             "temp_sensor": self._controller._temp_sensor,
@@ -184,6 +191,22 @@ class EDry2WeatherInfoSensor(EDry2Sensor):
             "programmi_abilitati": enabled_programs,
             "programmi_abilitati_count": len(enabled_programs),
         }
+        if irrigation_weather:
+            attrs.update({
+                "source": irrigation_weather.get("source"),
+                "age_seconds": irrigation_weather.get("age_seconds"),
+                "available": irrigation_weather.get("available"),
+                "rain_block": irrigation_weather.get("rain_block"),
+                "wind_block": irrigation_weather.get("wind_block"),
+                "freeze_block": irrigation_weather.get("freeze_block"),
+                "is_raining": irrigation_weather.get("is_raining"),
+                "rain_last_24h_mm": irrigation_weather.get("rain_last_24h_mm"),
+                "forecast_rain_24h_mm": irrigation_weather.get("forecast_rain_24h_mm"),
+                "et0_mm_day": irrigation_weather.get("et0_mm_day"),
+                "irrigation_weather_score": irrigation_weather.get("irrigation_weather_score"),
+                "irrigation_weather_reason": irrigation_weather.get("irrigation_weather_reason"),
+            })
+        return attrs
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -1070,7 +1093,6 @@ class EDry2YearlyHistorySensor(EDry2HistorySensor):
     async def _check_reset(self, now):
         if now.day == 1 and now.month == 1:
             await self._reset()
-
 
 
 

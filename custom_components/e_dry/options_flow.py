@@ -82,6 +82,10 @@ class EDry2OptionsFlow(config_entries.OptionsFlow):
             self._options["wind_sensor_entity_id"] = user_input.get("wind_sensor_entity_id")
             self._options["wind_threshold"] = user_input.get("wind_threshold")
             self._options["enable_smart_calc"] = user_input.get("enable_smart_calc")
+            self._options["esunmind_weather_api_url"] = user_input.get("esunmind_weather_api_url")
+            self._options["weather_max_age_seconds"] = user_input.get("weather_max_age_seconds")
+            self._options["forecast_rain_skip_mm"] = user_input.get("forecast_rain_skip_mm")
+            self._options["recent_rain_skip_mm"] = user_input.get("recent_rain_skip_mm")
             return self.async_create_entry(title="", data=self._options)
 
         current_master = self._options.get("master_switch_entity_id", "")
@@ -93,6 +97,10 @@ class EDry2OptionsFlow(config_entries.OptionsFlow):
         current_wind = self._options.get("wind_sensor_entity_id") or "sensor.e_sunmind_weather_wind_ms"
         current_wind_threshold = self._options.get("wind_threshold", 20.0)
         current_smart = self._options.get("enable_smart_calc", False)
+        current_api_url = self._options.get("esunmind_weather_api_url") or "http://192.168.3.24:1980/api/weather/irrigation"
+        current_max_age = self._options.get("weather_max_age_seconds", 900.0)
+        current_forecast_skip = self._options.get("forecast_rain_skip_mm", 6.0)
+        current_recent_skip = self._options.get("recent_rain_skip_mm", 4.0)
         
         from homeassistant.helpers import selector
         
@@ -116,6 +124,10 @@ class EDry2OptionsFlow(config_entries.OptionsFlow):
             ),
             vol.Optional("wind_threshold", default=current_wind_threshold): vol.Coerce(float),
             vol.Optional("enable_smart_calc", default=current_smart): bool,
+            vol.Optional("esunmind_weather_api_url", default=current_api_url): str,
+            vol.Optional("weather_max_age_seconds", default=current_max_age): vol.Coerce(float),
+            vol.Optional("forecast_rain_skip_mm", default=current_forecast_skip): vol.Coerce(float),
+            vol.Optional("recent_rain_skip_mm", default=current_recent_skip): vol.Coerce(float),
         })
 
         return self.async_show_form(step_id="general", data_schema=schema)

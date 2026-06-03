@@ -7,7 +7,8 @@ from typing import Any, Dict, Optional, List, Callable, Set, Tuple
 import logging
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_call_later, async_track_time_change
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_call_later, async_track_time_change, async_track_time_interval
 from homeassistant.util.dt import as_local
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from collections import deque
@@ -29,6 +30,7 @@ except Exception:
 # a configured duration.
 DEFAULT_ZONE_MINUTES = 10.0
 MASTER_POST_SECONDS = 3
+DEFAULT_ESUNMIND_IRRIGATION_URL = "http://192.168.3.24:1980/api/weather/irrigation"
 
 WEEKDAY_MAP: Dict[str, int] = {
     "mon": 0,
@@ -79,6 +81,14 @@ class EDry2Controller:
         self._master_lock: bool = False
 
         self.reload_options(self._options)
+
+        self._irrigation_weather_cache: Dict[str, Any] = {}
+        self._irrigation_weather_cache_ts: float = 0.0
+        self._irrigation_weather_error: Optional[str] = None
+        self._hass.async_create_task(self.async_refresh_irrigation_weather())
+        self._weather_interval_listener = async_track_time_interval(
+            hass, self._handle_weather_refresh_tick, timedelta(minutes=5)
+        )
 
         self._time_listener = async_track_time_change(
             hass, self._handle_time_tick, second=0
@@ -198,6 +208,14 @@ class EDry2Controller:
         self._wind_sensor = self._options.get("wind_sensor_entity_id") or "sensor.e_sunmind_weather_wind_ms"
         self._wind_threshold = float(self._options.get("wind_threshold") or 20.0)
         self._enable_smart_calc = bool(self._options.get("enable_smart_calc", False))
+        self._esunmind_weather_api_url = self._normalize_esunmind_weather_url(
+            self._options.get("esunmind_weather_api_url")
+            or self._options.get("e_sunmind_irrigation_api_url")
+            or DEFAULT_ESUNMIND_IRRIGATION_URL
+        )
+        self._weather_max_age_seconds = float(self._options.get("weather_max_age_seconds") or 900.0)
+        self._forecast_rain_skip_mm = float(self._options.get("forecast_rain_skip_mm") or 6.0)
+        self._recent_rain_skip_mm = float(self._options.get("recent_rain_skip_mm") or 4.0)
         
         # Manual adjustment (default 100%)
         # We don't load this from options because it's a runtime state managed by a NumberEntity
@@ -301,6 +319,144 @@ class EDry2Controller:
                     "zone_durations": zone_overrides,
                 }
             )
+
+    @staticmethod
+    def _normalize_esunmind_weather_url(url: Any) -> str:
+        value = str(url or "").strip()
+        if value.endswith("/api/data"):
+            return value[: -len("/api/data")] + "/api/weather/irrigation"
+        return value
+
+    @staticmethod
+    def _to_float_or_none(value: Any) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            text = str(value).strip().lower()
+            if text in ("", "unknown", "unavailable", "none", "nan"):
+                return None
+            return float(value)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _clamp(value: float, low: float, high: float) -> float:
+        return max(low, min(high, value))
+
+    async def _handle_weather_refresh_tick(self, now: datetime) -> None:
+        await self.async_refresh_irrigation_weather()
+
+    async def async_refresh_irrigation_weather(self) -> None:
+        """Refresh normalized irrigation weather from e-SunMind in background."""
+        url = self._esunmind_weather_api_url
+        if not url:
+            return
+        try:
+            session = async_get_clientsession(self._hass)
+            async with session.get(url, timeout=8) as resp:
+                if resp.status >= 400:
+                    self._irrigation_weather_error = f"HTTP {resp.status}"
+                    return
+                payload = await resp.json(content_type=None)
+                if isinstance(payload, dict):
+                    self._irrigation_weather_cache = payload
+                    self._irrigation_weather_cache_ts = time.time()
+                    self._irrigation_weather_error = None
+        except Exception as exc:
+            self._irrigation_weather_error = str(exc)
+            _LOGGER.debug("async_refresh_irrigation_weather failed: %s", exc)
+
+    def _get_irrigation_weather_payload(self) -> Optional[Dict[str, Any]]:
+        payload = self._irrigation_weather_cache
+        if not isinstance(payload, dict) or not payload:
+            return None
+        cache_age = time.time() - float(self._irrigation_weather_cache_ts or 0.0)
+        if cache_age > max(self._weather_max_age_seconds, 60.0):
+            return None
+        age = self._to_float_or_none(payload.get("age_seconds"))
+        if age is not None and age > self._weather_max_age_seconds:
+            return None
+        if payload.get("available") is False:
+            return None
+        return payload
+
+    def _get_legacy_weather_status_info(self) -> Tuple[bool, str]:
+        """Legacy weather block based on configured HA sensors."""
+        # 1. Check Rain
+        if self._rain_sensor:
+            state = self._hass.states.get(self._rain_sensor)
+            if state and state.state not in ("unknown", "unavailable"):
+                try:
+                    # If binary sensor: on = rain = skip
+                    if state.domain == "binary_sensor":
+                        if state.state == "on":
+                            return False, "Pioggia rilevata (sensore attivo)"
+                    else:
+                        # Numeric sensor (mm)
+                        val = float(state.state)
+                        if val > self._rain_threshold:
+                            return False, f"Pioggia {val:.1f}mm > {self._rain_threshold}mm"
+                except ValueError:
+                    pass
+
+        # 2. Check Temperature (Freeze protection)
+        if self._temp_sensor:
+            state = self._hass.states.get(self._temp_sensor)
+            if state and state.state not in ("unknown", "unavailable"):
+                try:
+                    val = float(state.state)
+                    if val < self._min_temp:
+                        return False, f"Temp {val:.1f}°C < {self._min_temp}°C"
+                except ValueError:
+                    pass
+
+        # 3. Check Wind
+        if self._wind_sensor:
+            state = self._hass.states.get(self._wind_sensor)
+            if state and state.state not in ("unknown", "unavailable"):
+                try:
+                    val = float(state.state)
+                    unit = str((state.attributes or {}).get("unit_of_measurement") or "").strip().lower()
+                    if unit in ("m/s", "mps", "ms"):
+                        val = val * 3.6
+                    if val > self._wind_threshold:
+                        return False, f"Vento {val:.1f}km/h > {self._wind_threshold}km/h"
+                except ValueError:
+                    pass
+
+        return True, "Condizioni Ottimali"
+
+    def _get_professional_weather_status_info(self, payload: Dict[str, Any]) -> Tuple[bool, str]:
+        reasons: list[str] = []
+        source = payload.get("source") or "e-SunMind"
+        age = self._to_float_or_none(payload.get("age_seconds"))
+        if age is not None:
+            reasons.append(f"{source}, dato {age:.0f}s")
+        else:
+            reasons.append(str(source))
+
+        if bool(payload.get("freeze_block")):
+            return False, "Blocco gelo da e-SunMind"
+        if bool(payload.get("rain_block")) or bool(payload.get("is_raining")):
+            return False, "Blocco pioggia da e-SunMind"
+        if bool(payload.get("wind_block")):
+            return False, "Blocco vento da e-SunMind"
+
+        recent_rain = self._to_float_or_none(payload.get("rain_last_24h_mm"))
+        if recent_rain is not None and recent_rain >= self._recent_rain_skip_mm:
+            return False, f"Pioggia ultime 24h {recent_rain:.1f}mm >= {self._recent_rain_skip_mm:.1f}mm"
+
+        forecast_rain = self._to_float_or_none(payload.get("forecast_rain_24h_mm"))
+        if forecast_rain is not None and forecast_rain >= self._forecast_rain_skip_mm:
+            return False, f"Pioggia prevista 24h {forecast_rain:.1f}mm >= {self._forecast_rain_skip_mm:.1f}mm"
+
+        score = self._to_float_or_none(payload.get("irrigation_weather_score"))
+        if score is not None:
+            reasons.append(f"score {score:.0f}")
+        reason = payload.get("irrigation_weather_reason")
+        if reason:
+            reasons.append(str(reason))
+        return True, "OK meteo professionale: " + ", ".join(reasons)
 
     async def start_zone(self, zone_id: int, source: str = "manual") -> None:
         minutes = self.get_zone_duration(zone_id)
@@ -1112,54 +1268,67 @@ class EDry2Controller:
 
     def get_weather_status_info(self) -> Tuple[bool, str]:
         """Check weather and return status + reason."""
-        # 1. Check Rain
-        if self._rain_sensor:
-            state = self._hass.states.get(self._rain_sensor)
-            if state and state.state not in ("unknown", "unavailable"):
-                try:
-                    # If binary sensor: on = rain = skip
-                    if state.domain == "binary_sensor":
-                        if state.state == "on":
-                            return False, "Pioggia rilevata (sensore attivo)"
-                    else:
-                        # Numeric sensor (mm)
-                        val = float(state.state)
-                        if val > self._rain_threshold:
-                            return False, f"Pioggia {val:.1f}mm > {self._rain_threshold}mm"
-                except ValueError:
-                    pass
-
-        # 2. Check Temperature (Freeze protection)
-        if self._temp_sensor:
-            state = self._hass.states.get(self._temp_sensor)
-            if state and state.state not in ("unknown", "unavailable"):
-                try:
-                    val = float(state.state)
-                    if val < self._min_temp:
-                        return False, f"Temp {val:.1f}°C < {self._min_temp}°C"
-                except ValueError:
-                    pass
-        
-        # 3. Check Wind
-        if self._wind_sensor:
-            state = self._hass.states.get(self._wind_sensor)
-            if state and state.state not in ("unknown", "unavailable"):
-                try:
-                    val = float(state.state)
-                    unit = str((state.attributes or {}).get("unit_of_measurement") or "").strip().lower()
-                    if unit in ("m/s", "mps", "ms"):
-                        val = val * 3.6
-                    if val > self._wind_threshold:
-                        return False, f"Vento {val:.1f}km/h > {self._wind_threshold}km/h"
-                except ValueError:
-                    pass
-
-        return True, "Condizioni Ottimali"
+        payload = self._get_irrigation_weather_payload()
+        if payload:
+            return self._get_professional_weather_status_info(payload)
+        return self._get_legacy_weather_status_info()
 
     def get_smart_calc_info(self) -> Tuple[float, str]:
         """Calculate smart adjustment and return factor + explanation."""
         if not self._enable_smart_calc:
             return 1.0, "Smart Calc disabilitato"
+
+        payload = self._get_irrigation_weather_payload()
+        if payload:
+            temp = self._to_float_or_none(payload.get("temperature_c"))
+            hum = self._to_float_or_none(payload.get("humidity_pct"))
+            et0 = self._to_float_or_none(payload.get("et0_mm_day"))
+            rain_24h = self._to_float_or_none(payload.get("rain_last_24h_mm"))
+            forecast_rain = self._to_float_or_none(payload.get("forecast_rain_24h_mm"))
+            solar = self._to_float_or_none(payload.get("solar_radiation_w_m2"))
+            wind_ms = self._to_float_or_none(payload.get("wind_speed_ms"))
+            score = self._to_float_or_none(payload.get("irrigation_weather_score"))
+
+            factor = 1.0
+            parts: list[str] = ["Base 1.00"]
+
+            if et0 is not None:
+                delta = self._clamp((et0 - 3.5) * 0.12, -0.25, 0.35)
+                factor *= 1.0 + delta
+                parts.append(f"ET0 {et0:.1f}mm/g ({delta:+.2f})")
+            if rain_24h is not None and rain_24h > 0:
+                mult = self._clamp(1.0 - (rain_24h / 10.0), 0.20, 1.0)
+                factor *= mult
+                parts.append(f"Pioggia 24h {rain_24h:.1f}mm (x{mult:.2f})")
+            if forecast_rain is not None and forecast_rain > 0:
+                mult = self._clamp(1.0 - (forecast_rain / 8.0), 0.0, 1.0)
+                factor *= mult
+                parts.append(f"Pioggia prevista {forecast_rain:.1f}mm (x{mult:.2f})")
+            if temp is not None:
+                delta = self._clamp((temp - 25.0) * 0.025, -0.20, 0.25)
+                factor *= 1.0 + delta
+                parts.append(f"Temp {temp:.1f}°C ({delta:+.2f})")
+            if hum is not None:
+                delta = self._clamp((50.0 - hum) * 0.01, -0.20, 0.25)
+                factor *= 1.0 + delta
+                parts.append(f"Hum {hum:.1f}% ({delta:+.2f})")
+            if solar is not None:
+                delta = 0.12 if solar >= 900 else 0.08 if solar >= 700 else 0.0
+                if delta:
+                    factor *= 1.0 + delta
+                    parts.append(f"Sole {solar:.0f}W/m² ({delta:+.2f})")
+            if wind_ms is not None and wind_ms > 0:
+                wind_kmh = wind_ms * 3.6
+                if wind_kmh >= self._wind_threshold * 0.75:
+                    factor *= 0.90
+                    parts.append(f"Vento {wind_kmh:.1f}km/h (x0.90)")
+            if score is not None:
+                mult = self._clamp(0.50 + (score / 200.0), 0.50, 1.00)
+                factor *= mult
+                parts.append(f"Score {score:.0f} (x{mult:.2f})")
+
+            factor = self._clamp(factor, 0.0, 2.5)
+            return factor, " + ".join(parts)
             
         temp = 20.0
         hum = 60.0

@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.0.4 - 2026-06-03
+
+- Meteo professionale: il component legge in background e-SunMind `GET /api/weather/irrigation` come fonte primaria.
+- Aggiunte soglie configurabili per freschezza dato, pioggia prevista 24h e pioggia recente 24h.
+- SmartCalc aggiornato con ET0, pioggia recente, pioggia prevista, temperatura, umidita, radiazione solare, vento e weather score.
+- `sensor.e_dry_meteo_info` espone endpoint, modalita meteo, source, age, blocchi, score e dettagli SmartCalc.
+- README aggiornato con funzionamento e taratura completa.
+
 ## 10.0.3 - 2026-06-03
 
 - Bump versione custom component a `10.0.3` per allineamento con add-on e-Dry `10.0.3`.
