@@ -8,3 +8,5 @@
 - Aggiunti README, CHANGELOG e `.gitignore`.
 - Aggiunto `hacs.json` con dominio `e_dry`.
 - Check globale: bump a `10.0.1` e completata la documentazione dei servizi registrati.
+- Meteo smart calc migrato ai sensori e-SunMind di default; vento e-SunMind in `m/s` convertito a `km/h` per la soglia esistente.
+- Opzioni component aggiornate per mostrare i sensori e-SunMind come default di taratura.

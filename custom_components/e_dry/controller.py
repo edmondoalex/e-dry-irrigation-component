@@ -190,12 +190,12 @@ class EDry2Controller:
         self._master_switch_entity_id = self._options.get("master_switch_entity_id")
         
         # Weather settings
-        self._rain_sensor = self._options.get("rain_sensor_entity_id")
+        self._rain_sensor = self._options.get("rain_sensor_entity_id") or "sensor.e_sunmind_weather_precip_1h_mm"
         self._rain_threshold = float(self._options.get("rain_threshold") or 0.0)
-        self._temp_sensor = self._options.get("temp_sensor_entity_id")
+        self._temp_sensor = self._options.get("temp_sensor_entity_id") or "sensor.e_sunmind_weather_temp_c"
         self._min_temp = float(self._options.get("min_temp") or 5.0)
-        self._hum_sensor = self._options.get("humidity_sensor_entity_id")
-        self._wind_sensor = self._options.get("wind_sensor_entity_id")
+        self._hum_sensor = self._options.get("humidity_sensor_entity_id") or "sensor.e_sunmind_weather_humidity_pct"
+        self._wind_sensor = self._options.get("wind_sensor_entity_id") or "sensor.e_sunmind_weather_wind_ms"
         self._wind_threshold = float(self._options.get("wind_threshold") or 20.0)
         self._enable_smart_calc = bool(self._options.get("enable_smart_calc", False))
         
@@ -1146,6 +1146,9 @@ class EDry2Controller:
             if state and state.state not in ("unknown", "unavailable"):
                 try:
                     val = float(state.state)
+                    unit = str((state.attributes or {}).get("unit_of_measurement") or "").strip().lower()
+                    if unit in ("m/s", "mps", "ms"):
+                        val = val * 3.6
                     if val > self._wind_threshold:
                         return False, f"Vento {val:.1f}km/h > {self._wind_threshold}km/h"
                 except ValueError:

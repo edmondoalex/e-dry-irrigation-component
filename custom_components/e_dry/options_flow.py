@@ -85,12 +85,12 @@ class EDry2OptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=self._options)
 
         current_master = self._options.get("master_switch_entity_id", "")
-        current_rain = self._options.get("rain_sensor_entity_id", "")
+        current_rain = self._options.get("rain_sensor_entity_id") or "sensor.e_sunmind_weather_precip_1h_mm"
         current_rain_threshold = self._options.get("rain_threshold", 0.0)
-        current_temp = self._options.get("temp_sensor_entity_id", "")
+        current_temp = self._options.get("temp_sensor_entity_id") or "sensor.e_sunmind_weather_temp_c"
         current_min_temp = self._options.get("min_temp", 5.0)
-        current_hum = self._options.get("humidity_sensor_entity_id", "")
-        current_wind = self._options.get("wind_sensor_entity_id", "")
+        current_hum = self._options.get("humidity_sensor_entity_id") or "sensor.e_sunmind_weather_humidity_pct"
+        current_wind = self._options.get("wind_sensor_entity_id") or "sensor.e_sunmind_weather_wind_ms"
         current_wind_threshold = self._options.get("wind_threshold", 20.0)
         current_smart = self._options.get("enable_smart_calc", False)
         

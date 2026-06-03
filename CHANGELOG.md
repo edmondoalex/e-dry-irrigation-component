@@ -1,5 +1,11 @@
 # Changelog
 
+## 10.0.2 - 2026-06-03
+
+- Smart calc e blocchi meteo usano di default i sensori e-SunMind `sensor.e_sunmind_weather_*`.
+- Normalizzato il confronto vento: i valori `m/s` vengono convertiti in `km/h` prima del confronto con la soglia storica.
+- Il pannello opzioni propone i sensori e-SunMind come default per rain/temp/humidity/wind.
+
 ## 10.0.1 - 2026-06-03
 
 - Bump versione custom component a `10.0.1`.
