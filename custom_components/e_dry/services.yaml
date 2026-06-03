@@ -122,3 +122,39 @@ update_program:
       selector:
         boolean:
 
+remove_stale_entities:
+  name: Remove stale entities
+  description: Rimuove entita obsolete del config entry corrente che contengono una stringa.
+  fields:
+    match:
+      name: Testo da cercare
+      description: Stringa da cercare in entity_id, unique_id o nome originale.
+      required: false
+      default: reset
+      selector:
+        text:
+    dry_run:
+      name: Simulazione
+      description: Se attivo, scrive nel log cosa verrebbe rimosso senza eliminare entita.
+      required: false
+      selector:
+        boolean:
+
+request_event_log:
+  name: Request event log
+  description: Pubblica uno snapshot del log eventi sul bus Home Assistant.
+  fields:
+    limit:
+      name: Limite eventi
+      description: Numero massimo di eventi finali da includere.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 500
+          step: 1
+
+clear_event_log:
+  name: Clear event log
+  description: Svuota il log eventi interno e notifica i sensori collegati.
+  fields: {}
