@@ -1576,7 +1576,8 @@ class EDry2Controller:
             # apply smart/weather factor only if zone does NOT ignore weather.
             profile = self._zone_profile(zone)
             profile_multiplier = self._profile_smart_multiplier(zone)
-            zone_smart = smart_factor_global * profile_multiplier if not zone.get("ignore_weather") else 1.0
+            weather_smart = 1.0 if zone.get("ignore_weather") else smart_factor_global
+            zone_smart = weather_smart * profile_multiplier
             total_factor = manual_factor * zone_smart
 
             # Apply adjustment
@@ -1591,6 +1592,7 @@ class EDry2Controller:
                         "base_minutes": base_d,
                         "manual_factor": manual_factor,
                         "smart_factor_applied": zone_smart,
+                        "weather_smart_factor": weather_smart,
                         "global_smart_factor": smart_factor_global,
                         "profile_id": profile.get("id"),
                         "profile_name": profile.get("name"),
@@ -1647,7 +1649,8 @@ class EDry2Controller:
                 # Determine per-zone factor: always apply manual adjustment;
                 # apply smart/weather factor only if zone does NOT ignore weather.
                 profile_multiplier = self._profile_smart_multiplier(zone)
-                zone_smart = smart_factor_global * profile_multiplier if not zone.get("ignore_weather") else 1.0
+                weather_smart = 1.0 if zone.get("ignore_weather") else smart_factor_global
+                zone_smart = weather_smart * profile_multiplier
                 total_factor = manual_factor * zone_smart
 
                 # Apply Adjustment Factor

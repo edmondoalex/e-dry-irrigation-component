@@ -4,7 +4,7 @@
 
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
-Versione corrente: `10.0.9`.
+Versione corrente: `10.0.10`.
 
 Il component include `icon.png`, `logo.png`, `brand/` e `docs/assets/e-dry-irrigation.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS.
 
@@ -170,10 +170,11 @@ Il sensore `sensor.e_dry_meteo_info` espone gli attributi principali:
 
 ### Zone che ignorano il meteo
 
-Se una zona ha `ignore_weather=true`:
+Da `10.0.10`, se una zona ha `ignore_weather=true`:
 
 - non viene saltata per blocchi meteo;
-- non applica SmartCalc;
+- non applica il fattore SmartCalc meteo;
+- applica comunque il moltiplicatore del preset zona;
 - applica comunque la regolazione manuale globale.
 
 Questa opzione e utile per serre, vasi coperti, goccia sotto tettoia o linee tecniche che devono partire indipendentemente dal meteo.

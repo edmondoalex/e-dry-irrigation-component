@@ -252,7 +252,8 @@ class EDry2ZonesInfoSensor(EDry2Sensor):
                 profile_multiplier = 1.0
             # If zone ignores weather, smart duration == configured (no smart applied)
             zone_ignores = bool(z.get("ignore_weather", False))
-            smart_multiplier = 1.0 if zone_ignores else smart_factor * profile_multiplier
+            weather_smart = 1.0 if zone_ignores else smart_factor
+            smart_multiplier = weather_smart * profile_multiplier
             smart_d = round(configured * smart_multiplier, 1)
             # Effective duration: always apply manual factor; apply smart only if not ignored
             zone_smart = smart_multiplier
@@ -1108,5 +1109,4 @@ class EDry2YearlyHistorySensor(EDry2HistorySensor):
     async def _check_reset(self, now):
         if now.day == 1 and now.month == 1:
             await self._reset()
-
 

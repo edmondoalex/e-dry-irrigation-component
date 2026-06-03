@@ -17,3 +17,4 @@
 - Bump component a `10.0.7`: aggiunte traduzioni `strings.json` e `translations/it.json` per rendere leggibili le opzioni meteo/SmartCalc in Home Assistant.
 - Bump component a `10.0.8`: aggiunto servizio `e_dry.update_weather_settings` per permettere all'add-on di modificare tarature meteo e SmartCalc.
 - Bump component a `10.0.9`: aggiunti preset zona integrati/custom persistenti, assegnazione `profile_id` per zona e moltiplicatore SmartCalc per comportamento zona.
+- Bump component a `10.0.10`: il preset zona resta applicato anche con `ignore_weather=true`; viene ignorato solo il fattore SmartCalc meteo.

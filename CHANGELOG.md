@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.0.10 - 2026-06-03
+
+- Corretto comportamento preset con `ignore_weather=true`: la zona ignora i blocchi/meteo e il fattore SmartCalc meteo, ma mantiene il moltiplicatore del preset zona.
+- Aggiornato `sensor.e_dry_zones_info` per mostrare `smart_duration` ed `effective_duration` comprensive del preset anche quando la zona ignora il meteo.
+
 ## 10.0.9 - 2026-06-03
 
 - Aggiunti preset comportamento zona integrati: `standard`, `erba`, `fiori`, `piante`, `orto`, `vasi`, `alberi`.
