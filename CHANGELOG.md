@@ -1,5 +1,9 @@
 # Changelog
 
+## 10.0.11 - 2026-06-04
+
+- Aggiunto in `custom_components/e_dry/brand/` il logo EKONEX traslucido utilizzato dall'add-on.
+
 ## 10.0.10 - 2026-06-03
 
 - Corretto comportamento preset con `ignore_weather=true`: la zona ignora i blocchi/meteo e il fattore SmartCalc meteo, ma mantiene il moltiplicatore del preset zona.
