@@ -26,6 +26,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Ensure dedicated integration debug logger is configured early
     setup_debug_logger()
 
+    if entry.title in ("e-dry Irrigation", "e-Dry Irrigation", "e-dry"):
+        hass.config_entries.async_update_entry(entry, title="e-Dry Irrigazione")
+
     controller = EDry2Controller(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = controller
 

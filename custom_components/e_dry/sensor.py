@@ -99,9 +99,9 @@ class EDry2Sensor(SensorEntity):
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self._controller.entry_id)},
-            name="Centralina Irrigazione",
-            manufacturer="E-Dry",
-            model="Smart Irrigation Controller",
+            name="Centralina irrigazione giardino",
+            manufacturer="e-Dry",
+            model="Gestione automatica irrigazione",
         )
 
     async def async_added_to_hass(self) -> None:
@@ -1109,4 +1109,3 @@ class EDry2YearlyHistorySensor(EDry2HistorySensor):
     async def _check_reset(self, now):
         if now.day == 1 and now.month == 1:
             await self._reset()
-

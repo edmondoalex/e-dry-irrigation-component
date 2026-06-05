@@ -1,18 +1,18 @@
 {
-  "title": "e-Dry Irrigation",
+  "title": "e-Dry Irrigazione",
   "config": {
     "step": {
       "user": {
-        "title": "e-Dry Irrigation",
-        "description": "Configure the e-Dry irrigation controller."
+        "title": "e-Dry Irrigazione",
+        "description": "Configure your garden irrigation controller."
       }
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "e-Dry options",
-        "description": "Choose which part of the irrigation controller to configure.",
+        "title": "e-Dry settings",
+        "description": "Choose what you want to adjust.",
         "data": {
           "choice": "Section"
         }

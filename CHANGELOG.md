@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.1.1 - 2026-06-05
+
+- Rese piu chiare le etichette mostrate in Home Assistant per utenti finali: nome integrazione, voce configurata e dispositivo.
+- Rinominata automaticamente la vecchia voce `e-dry Irrigation` in `e-Dry Irrigazione` al prossimo riavvio.
+
 ## 10.1.0 - 2026-06-05
 
 - Aggiunto servizio `e_dry.create_program` per creare nuovi programmi persistenti da add-on o automazioni.

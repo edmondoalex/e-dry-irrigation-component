@@ -4,7 +4,7 @@
 
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
-Versione corrente: `10.1.0`.
+Versione corrente: `10.1.1`.
 
 Il component include `icon.png`, `logo.png`, `brand/` e `docs/assets/e-dry-irrigation.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS. In `brand/` e disponibile anche `logo only translucent etichetta.png`, usato dall'add-on come logo EKONEX nell'intestazione.
 
@@ -16,7 +16,7 @@ Da `10.1.0` e disponibile il servizio `e_dry.create_program` per creare programm
 
 1. Copia la cartella `custom_components/e_dry` dentro la cartella `config/custom_components/` di Home Assistant.
 2. Riavvia Home Assistant.
-3. Aggiungi l'integrazione **e-dry Irrigation** dalla UI di Home Assistant.
+3. Aggiungi l'integrazione **e-Dry Irrigazione** dalla UI di Home Assistant.
 
 La cartella deve essere:
 
@@ -136,7 +136,7 @@ data:
 
 ### Opzioni consigliate
 
-In **Impostazioni integrazione > e-dry Irrigation > Opzioni > Impostazioni Generali**:
+In **Impostazioni integrazione > e-Dry Irrigazione > Opzioni > Impostazioni Generali**:
 
 ```text
 esunmind_weather_api_url: http://192.168.3.24:1980/api/weather/irrigation

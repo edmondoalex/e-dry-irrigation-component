@@ -23,3 +23,4 @@
 ## 2026-06-05
 
 - Bump component a `10.1.0`: aggiunto servizio `e_dry.create_program` per creazione programmi persistenti da add-on.
+- Bump component a `10.1.1`: rese piu chiare le etichette Home Assistant per utenti finali.
