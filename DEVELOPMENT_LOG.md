@@ -18,6 +18,7 @@
 - Bump component a `10.0.8`: aggiunto servizio `e_dry.update_weather_settings` per permettere all'add-on di modificare tarature meteo e SmartCalc.
 - Bump component a `10.0.9`: aggiunti preset zona integrati/custom persistenti, assegnazione `profile_id` per zona e moltiplicatore SmartCalc per comportamento zona.
 - Bump component a `10.0.10`: il preset zona resta applicato anche con `ignore_weather=true`; viene ignorato solo il fattore SmartCalc meteo.
+- Bump component a `10.1.3`: SmartCalc usa pioggia oggi, raffica vento e VPD da e-SunMind quando disponibili; meteo info espone piu attributi stazione reale.
 - Bump component a `10.0.11`: aggiunto nel brand il logo EKONEX traslucido utilizzato dall'add-on.
 
 ## 2026-06-05

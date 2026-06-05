@@ -502,9 +502,25 @@ class EDry2Controller:
         if bool(payload.get("wind_block")):
             return False, "Blocco vento da e-SunMind"
 
+        gust_ms = self._to_float_or_none(
+            payload.get("wind_gust_ms")
+            if payload.get("wind_gust_ms") is not None
+            else payload.get("gust_ms")
+            if payload.get("gust_ms") is not None
+            else payload.get("wind_gust_speed_ms")
+        )
+        if gust_ms is not None and gust_ms > 0:
+            gust_kmh = gust_ms * 3.6
+            if gust_kmh >= self._wind_threshold:
+                return False, f"Raffica vento {gust_kmh:.1f}km/h >= {self._wind_threshold:.1f}km/h"
+
         recent_rain = self._to_float_or_none(payload.get("rain_last_24h_mm"))
         if recent_rain is not None and recent_rain >= self._recent_rain_skip_mm:
             return False, f"Pioggia ultime 24h {recent_rain:.1f}mm >= {self._recent_rain_skip_mm:.1f}mm"
+
+        rain_today = self._to_float_or_none(payload.get("rain_today_mm"))
+        if rain_today is not None and rain_today >= self._recent_rain_skip_mm:
+            return False, f"Pioggia oggi {rain_today:.1f}mm >= {self._recent_rain_skip_mm:.1f}mm"
 
         forecast_rain = self._to_float_or_none(payload.get("forecast_rain_24h_mm"))
         if forecast_rain is not None and forecast_rain >= self._forecast_rain_skip_mm:
@@ -1441,6 +1457,15 @@ class EDry2Controller:
             forecast_rain = self._to_float_or_none(payload.get("forecast_rain_24h_mm"))
             solar = self._to_float_or_none(payload.get("solar_radiation_w_m2"))
             wind_ms = self._to_float_or_none(payload.get("wind_speed_ms"))
+            gust_ms = self._to_float_or_none(
+                payload.get("wind_gust_ms")
+                if payload.get("wind_gust_ms") is not None
+                else payload.get("gust_ms")
+                if payload.get("gust_ms") is not None
+                else payload.get("wind_gust_speed_ms")
+            )
+            rain_today = self._to_float_or_none(payload.get("rain_today_mm"))
+            vpd_hpa = self._to_float_or_none(payload.get("vpd_hpa"))
             score = self._to_float_or_none(payload.get("irrigation_weather_score"))
 
             factor = 1.0
@@ -1454,6 +1479,10 @@ class EDry2Controller:
                 mult = self._clamp(1.0 - (rain_24h / 10.0), 0.20, 1.0)
                 factor *= mult
                 parts.append(f"Pioggia 24h {rain_24h:.1f}mm (x{mult:.2f})")
+            if rain_today is not None and rain_today > 0:
+                mult = self._clamp(1.0 - (rain_today / 8.0), 0.20, 1.0)
+                factor *= mult
+                parts.append(f"Pioggia oggi {rain_today:.1f}mm (x{mult:.2f})")
             if forecast_rain is not None and forecast_rain > 0:
                 mult = self._clamp(1.0 - (forecast_rain / 8.0), 0.0, 1.0)
                 factor *= mult
@@ -1476,6 +1505,16 @@ class EDry2Controller:
                 if wind_kmh >= self._wind_threshold * 0.75:
                     factor *= 0.90
                     parts.append(f"Vento {wind_kmh:.1f}km/h (x0.90)")
+            if gust_ms is not None and gust_ms > 0:
+                gust_kmh = gust_ms * 3.6
+                if gust_kmh >= self._wind_threshold * 0.75:
+                    factor *= 0.85
+                    parts.append(f"Raffica {gust_kmh:.1f}km/h (x0.85)")
+            if vpd_hpa is not None:
+                delta = 0.12 if vpd_hpa >= 25 else 0.08 if vpd_hpa >= 18 else -0.06 if vpd_hpa <= 8 else 0.0
+                if delta:
+                    factor *= 1.0 + delta
+                    parts.append(f"VPD {vpd_hpa:.1f}hPa ({delta:+.2f})")
             if score is not None:
                 mult = self._clamp(0.50 + (score / 200.0), 0.50, 1.00)
                 factor *= mult

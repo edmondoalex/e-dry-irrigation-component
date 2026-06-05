@@ -4,7 +4,7 @@
 
 Custom integration Home Assistant per il controllo irrigazione e-Dry.
 
-Versione corrente: `10.1.2`.
+Versione corrente: `10.1.3`.
 
 Il component include `icon.png`, `logo.png`, `brand/` e `docs/assets/e-dry-irrigation.png` per mantenere il brand e-Dry nella UI Home Assistant/HACS. In `brand/` e disponibile anche `logo only translucent etichetta.png`, usato dall'add-on come logo EKONEX nell'intestazione.
 

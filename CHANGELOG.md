@@ -1,5 +1,14 @@
 # Changelog
 
+## 10.1.3 - 2026-06-05
+
+- SmartCalc usa anche `rain_today_mm`, raffica vento e `vpd_hpa` quando disponibili da e-SunMind.
+- `sensor.e_dry_meteo_info` espone pioggia oggi, vento/raffica, radiazione solare, UV, VPD, dew point e stato stazione.
+
+## 10.1.2 - 2026-06-05
+
+- Aggiunti dati runtime programmi: zona corrente, prossima zona, residuo e servizi per saltare/fermare programmi.
+
 ## 10.1.1 - 2026-06-05
 
 - Rese piu chiare le etichette mostrate in Home Assistant per utenti finali: nome integrazione, voce configurata e dispositivo.
