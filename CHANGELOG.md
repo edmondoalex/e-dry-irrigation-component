@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.1.0 - 2026-06-05
+
+- Aggiunto servizio `e_dry.create_program` per creare nuovi programmi persistenti da add-on o automazioni.
+- Il servizio riusa la logica persistente di `update_program` assegnando automaticamente il prossimo ID disponibile.
+
 ## 10.0.11 - 2026-06-04
 
 - Aggiunto in `custom_components/e_dry/brand/` il logo EKONEX traslucido utilizzato dall'add-on.

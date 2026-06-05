@@ -113,6 +113,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_register(DOMAIN, "update_program", handle_update_program)
 
+    async def handle_create_program(call: ServiceCall) -> None:
+        data = dict(call.data)
+        data["program_id"] = 0
+        await controller.update_program(data)
+
+    hass.services.async_register(DOMAIN, "create_program", handle_create_program)
+
     async def handle_update_zone(call: ServiceCall) -> None:
         await controller.update_zone(call.data)
 

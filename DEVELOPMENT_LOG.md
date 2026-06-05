@@ -19,3 +19,7 @@
 - Bump component a `10.0.9`: aggiunti preset zona integrati/custom persistenti, assegnazione `profile_id` per zona e moltiplicatore SmartCalc per comportamento zona.
 - Bump component a `10.0.10`: il preset zona resta applicato anche con `ignore_weather=true`; viene ignorato solo il fattore SmartCalc meteo.
 - Bump component a `10.0.11`: aggiunto nel brand il logo EKONEX traslucido utilizzato dall'add-on.
+
+## 2026-06-05
+
+- Bump component a `10.1.0`: aggiunto servizio `e_dry.create_program` per creazione programmi persistenti da add-on.

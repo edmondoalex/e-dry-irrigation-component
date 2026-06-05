@@ -139,6 +139,59 @@ update_program:
       selector:
         boolean:
 
+create_program:
+  name: Crea programma
+  description: Crea un nuovo programma di irrigazione persistente.
+  fields:
+    name:
+      name: Nome
+      description: Nome del programma.
+      required: true
+      selector:
+        text:
+    time:
+      name: Orario
+      description: Orario di avvio (HH:MM).
+      required: true
+      selector:
+        time:
+    days:
+      name: Giorni
+      description: Lista dei giorni (mon, tue, wed, thu, fri, sat, sun).
+      required: true
+      selector:
+        select:
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+          multiple: true
+    zones:
+      name: Zone
+      description: ID zona o switch delle zone da includere.
+      required: true
+      selector:
+        object:
+    pause_minutes:
+      name: Pausa
+      description: Minuti di pausa tra le zone.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 0.5
+    enabled:
+      name: Abilitato
+      description: Abilita subito il programma.
+      required: false
+      selector:
+        boolean:
+
 update_weather_settings:
   name: Aggiorna tarature meteo
   description: Aggiorna endpoint e-SunMind, soglie meteo fallback e SmartCalc.
