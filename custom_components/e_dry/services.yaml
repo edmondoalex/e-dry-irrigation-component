@@ -25,6 +25,16 @@ stop_zone:
       name: Zona
       required: true
 
+skip_program_zone:
+  name: Skip current program zone
+  description: Salta la zona corrente del programma in esecuzione e passa alla prossima.
+  fields: {}
+
+stop_programs:
+  name: Stop programs
+  description: Ferma il programma in esecuzione e tutte le zone attive.
+  fields: {}
+
 update_zone:
   name: Update Zone
   description: Modifica il nome o la durata base di una zona.

@@ -1,7 +1,7 @@
 {
   "domain": "e_dry",
   "name": "e-Dry Irrigazione",
-  "version": "10.1.1",
+  "version": "10.1.2",
   "documentation": "https://github.com/edmondoalex/e-dry-irrigation-component",
   "requirements": [],
   "codeowners": [

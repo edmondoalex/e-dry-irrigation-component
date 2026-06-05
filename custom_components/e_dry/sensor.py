@@ -322,6 +322,7 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
         super().__init__(controller)
         self._attr_unique_id = f"{controller.entry_id}_programs_info"
         self._signal_unsub = None
+        self._unsub = None
 
     def _program_next_run(self, prog: Dict[str, Any]) -> Any:
         # compute next run for this program (similar logic to controller.get_next_scheduled_run)
@@ -362,6 +363,7 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
 
             next_run = self._program_next_run(p)
             progress = 0
+            is_running = self._controller._current_program_id == pid
             if self._controller._current_program_id == pid:
                 start_ts = self._controller._current_program_start_ts
                 duration = self._controller._current_program_duration
@@ -369,10 +371,19 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
                     elapsed = time.time() - start_ts
                     progress = int(min(100, max(0, (elapsed / duration) * 100)))
 
+            zone_end = self._controller._current_program_zone_end_at if is_running else None
+            remaining = None
+            if zone_end:
+                try:
+                    remaining = max(0, int(float(zone_end) - time.time()))
+                except Exception:
+                    remaining = None
+
             progs_out.append({
                 "id": pid,
                 "name": p.get("name"),
                 "enabled": bool(p.get("enabled", False)),
+                "running": bool(is_running),
                 "time": p.get("time"),
                 "days": list(p.get("days", []) or []),
                 "pause_minutes": float(p.get("pause_minutes", 0) or 0),
@@ -380,6 +391,11 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
                 "zone_durations": p.get("zone_durations", {}) or {},
                 "next_run": next_run,
                 "progress_percent": progress,
+                "current_zone_id": self._controller._current_program_zone_id if is_running else None,
+                "next_zone_id": self._controller._current_program_next_zone_id if is_running else None,
+                "zone_remaining_seconds": remaining,
+                "zone_started_at": self._controller._current_program_zone_started_at if is_running else None,
+                "zone_end_at": self._controller._current_program_zone_end_at if is_running else None,
             })
 
         return {"programs": progs_out}
@@ -398,6 +414,13 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
         self._signal_unsub = async_dispatcher_connect(self.hass, signal, _on_programs_update)
         if self._signal_unsub:
             self.async_on_remove(self._signal_unsub)
+        self._unsub = async_track_time_interval(
+            self.hass,
+            lambda _now: self.async_write_ha_state(),
+            timedelta(seconds=5),
+        )
+        if self._unsub:
+            self.async_on_remove(self._unsub)
 
 
 class EDry2EventLogSensor(EDry2Sensor):

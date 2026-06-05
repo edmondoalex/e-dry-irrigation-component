@@ -107,9 +107,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_stop_zone(call: ServiceCall) -> None:
         await controller.stop_zone(int(call.data["zone_id"]))
 
+    async def handle_skip_program_zone(call: ServiceCall) -> None:
+        await controller.skip_current_program_zone()
+
+    async def handle_stop_programs(call: ServiceCall) -> None:
+        await controller.stop_programs()
+
     hass.services.async_register(DOMAIN, "start_zone", handle_start_zone)
     hass.services.async_register(DOMAIN, "start_zone_for", handle_start_zone_for)
     hass.services.async_register(DOMAIN, "stop_zone", handle_stop_zone)
+    hass.services.async_register(DOMAIN, "skip_program_zone", handle_skip_program_zone)
+    hass.services.async_register(DOMAIN, "stop_programs", handle_stop_programs)
 
     async def handle_update_program(call: ServiceCall) -> None:
         await controller.update_program(call.data)

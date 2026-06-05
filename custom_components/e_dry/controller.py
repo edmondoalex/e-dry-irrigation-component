@@ -85,6 +85,11 @@ class EDry2Controller:
         self._current_program_id: Optional[int] = None
         self._current_program_start_ts: Optional[float] = None
         self._current_program_duration: Optional[float] = None
+        self._current_program_zone_id: Optional[int] = None
+        self._current_program_zone_started_at: Optional[float] = None
+        self._current_program_zone_end_at: Optional[float] = None
+        self._current_program_next_zone_id: Optional[int] = None
+        self._program_skip_event: Optional[asyncio.Event] = None
 
         # When a program explicitly controls the master valve, set this
         # flag to prevent automatic updates from `_update_master_switch`.
@@ -825,6 +830,13 @@ class EDry2Controller:
                 self._program_task = None
         # clear current program id reference
         self._current_program_id = None
+
+    async def skip_current_program_zone(self) -> None:
+        """Skip the current zone of a running program, if any."""
+        if self._current_program_id is None or self._program_task is None or self._program_task.done():
+            return
+        if self._program_skip_event is not None:
+            self._program_skip_event.set()
 
     async def stop_programs(self) -> None:
         """Stop current program and all zones (stop program execution).
@@ -1611,6 +1623,7 @@ class EDry2Controller:
         
         self._current_program_start_ts = time.time()
         self._current_program_duration = total_minutes * 60.0
+        self._program_skip_event = asyncio.Event()
 
         # Acquire master control for the duration of this program so that the
         # master valve remains on the whole time (including during pauses).
@@ -1621,7 +1634,7 @@ class EDry2Controller:
             _LOGGER.exception("_run_program: failed to ensure master on")
 
         try:
-            for zid in zones:
+            for idx, zid in enumerate(zones):
                 # If programs were disabled while the program was running, stop.
                 if not self._programs_enabled:
                     _LOGGER.debug(
@@ -1659,12 +1672,47 @@ class EDry2Controller:
                 if duration <= 0:
                     continue
 
+                now = time.time()
+                self._current_program_zone_id = int(zid)
+                self._current_program_zone_started_at = now
+                self._current_program_zone_end_at = now + (duration * 60.0)
+                self._current_program_next_zone_id = int(zones[idx + 1]) if idx + 1 < len(zones) else None
+                try:
+                    async_dispatcher_send(
+                        self._hass,
+                        f"{DOMAIN}_programs_updated_{self._entry.entry_id}",
+                        self._programs_enabled,
+                    )
+                except Exception:
+                    _LOGGER.debug("_run_program: failed to dispatch program zone update")
+
                 await self.start_zone_for(zid, duration, source="program")
                 try:
-                    await asyncio.sleep(duration * 60)
+                    if self._program_skip_event is None:
+                        await asyncio.sleep(duration * 60)
+                    else:
+                        self._program_skip_event.clear()
+                        sleep_task = asyncio.create_task(asyncio.sleep(duration * 60))
+                        skip_task = asyncio.create_task(self._program_skip_event.wait())
+                        done, pending = await asyncio.wait(
+                            {sleep_task, skip_task},
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        for task in pending:
+                            task.cancel()
+                        if skip_task in done and self._program_skip_event.is_set():
+                            self._program_skip_event.clear()
+                            try:
+                                await self.stop_zone(zid)
+                            except Exception:
+                                _LOGGER.exception("_run_program: failed to stop skipped zone %s", zid)
                 except asyncio.CancelledError:
                     _LOGGER.debug("_run_program: sleep cancelled during zone %s", zid)
                     raise
+                finally:
+                    self._current_program_zone_id = None
+                    self._current_program_zone_started_at = None
+                    self._current_program_zone_end_at = None
 
                 if pause > 0:
                     try:
@@ -1688,6 +1736,11 @@ class EDry2Controller:
             self._current_program_id = None
             self._current_program_start_ts = None
             self._current_program_duration = None
+            self._current_program_zone_id = None
+            self._current_program_zone_started_at = None
+            self._current_program_zone_end_at = None
+            self._current_program_next_zone_id = None
+            self._program_skip_event = None
 
             # Release master control after a short post-delay so downstream
             # devices (or UI) can observe final valve_off events.
