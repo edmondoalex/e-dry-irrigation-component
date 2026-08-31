@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_state_change_event
@@ -53,11 +53,9 @@ class EDry2ProgramSwitch(SwitchEntity):
 
         signal = f"{DOMAIN}_programs_updated_{self._controller.entry_id}"
 
-        def _on_programs_update(_val=None):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("program switch: failed to schedule async_write_ha_state")
+        @callback
+        def _on_programs_update(_val=None) -> None:
+            self.async_write_ha_state()
 
         unsub = async_dispatcher_connect(self.hass, signal, _on_programs_update)
         self.async_on_remove(unsub)
@@ -105,7 +103,8 @@ class EDry2ZoneSwitch(SwitchEntity):
         signal = f"{DOMAIN}_zone_updated_{self._controller.entry_id}"
         # Use a wrapper so dispatcher can pass the zone_id argument without
         # causing TypeError on the bound method.
-        def _on_zone_update(_zone_id=None):
+        @callback
+        def _on_zone_update(_zone_id=None) -> None:
             try:
                 _LOGGER.debug(
                     "switch.%s: dispatcher update received for zone %s; controller.is_zone_active=%s",
@@ -115,11 +114,7 @@ class EDry2ZoneSwitch(SwitchEntity):
                 )
             except Exception:
                 _LOGGER.exception("switch: error in dispatcher handler")
-            # Ensure async_write_ha_state runs on the event loop thread
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("switch: failed to schedule async_write_ha_state thread-safely")
+            self.async_write_ha_state()
 
         unsub = async_dispatcher_connect(self.hass, signal, _on_zone_update)
         self.async_on_remove(unsub)
@@ -133,7 +128,7 @@ class EDry2ZoneSwitch(SwitchEntity):
             # callback (its data contains 'entity_id', 'old_state', 'new_state').
             # Accept that Event and extract the new_state to react when the
             # physical relay is toggled directly on the device.
-            def _external_switch_changed(event):
+            async def _external_switch_changed(event) -> None:
                 try:
                     data = getattr(event, "data", {}) or {}
                     new_state = data.get("new_state")
@@ -150,29 +145,20 @@ class EDry2ZoneSwitch(SwitchEntity):
                 )
 
                 # If hardware turned the relay on, start the zone (and its
-                # timer) so the integration stays in sync. Use
-                # call_soon_threadsafe to schedule on the event loop.
+                # timer) so the integration stays in sync.
                 if new == "on" and not self._controller.is_zone_active(self._zone_id):
                     try:
-                        self.hass.loop.call_soon_threadsafe(
-                            lambda: self.hass.async_create_task(
-                                self._controller.start_zone(self._zone_id)
-                            )
-                        )
+                        await self._controller.start_zone(self._zone_id)
                     except Exception:
-                        _LOGGER.exception("switch: failed to schedule start_zone")
+                        _LOGGER.exception("switch: failed to start zone")
 
                 # If hardware turned the relay off, ensure the zone is stopped
                 # in the controller.
                 if new == "off" and self._controller.is_zone_active(self._zone_id):
                     try:
-                        self.hass.loop.call_soon_threadsafe(
-                            lambda: self.hass.async_create_task(
-                                self._controller.stop_zone(self._zone_id)
-                            )
-                        )
+                        await self._controller.stop_zone(self._zone_id)
                     except Exception:
-                        _LOGGER.exception("switch: failed to schedule stop_zone")
+                        _LOGGER.exception("switch: failed to stop zone")
 
             unsub_state = async_track_state_change_event(
                 self.hass, entity_id, _external_switch_changed
@@ -209,11 +195,9 @@ class EDry2ZoneIgnoreWeatherSwitch(SwitchEntity):
         await super().async_added_to_hass()
         signal = f"{DOMAIN}_zone_updated_{self._controller.entry_id}"
 
-        def _on_zone_update(_zone_id=None):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("ignore_weather switch: failed to schedule async_write_ha_state")
+        @callback
+        def _on_zone_update(_zone_id=None) -> None:
+            self.async_write_ha_state()
 
         unsub = async_dispatcher_connect(self.hass, signal, _on_zone_update)
         self.async_on_remove(unsub)
@@ -258,11 +242,9 @@ class EDry2ProgramItemSwitch(SwitchEntity):
         signal_specific = f"{DOMAIN}_program_updated_{self._controller.entry_id}_{self._program_id}"
         signal_generic = f"{DOMAIN}_programs_updated_{self._controller.entry_id}"
 
-        def _on_update(_data=None):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("program item switch: failed to schedule async_write_ha_state")
+        @callback
+        def _on_update(_data=None) -> None:
+            self.async_write_ha_state()
 
         unsub1 = async_dispatcher_connect(self.hass, signal_specific, _on_update)
         unsub2 = async_dispatcher_connect(self.hass, signal_generic, _on_update)

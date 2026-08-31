@@ -109,6 +109,28 @@ class EDry2Controller:
             hass, self._handle_time_tick, second=0
         )
 
+    def shutdown(self) -> None:
+        """Remove controller listeners and cancel pending work on unload."""
+        for listener_name in ("_weather_interval_listener", "_time_listener"):
+            listener = getattr(self, listener_name, None)
+            if listener is not None:
+                listener()
+                setattr(self, listener_name, None)
+
+        master_off_handle = getattr(self, "_master_off_handle", None)
+        if master_off_handle is not None:
+            master_off_handle()
+            self._master_off_handle = None
+
+        for zone in self._zones.values():
+            cancel = zone.get("cancel")
+            if cancel is not None:
+                cancel()
+                zone["cancel"] = None
+
+        if self._program_task is not None and not self._program_task.done():
+            self._program_task.cancel()
+
     @property
     def entry_id(self) -> str:
         return self._entry.entry_id
@@ -784,7 +806,7 @@ class EDry2Controller:
             if getattr(self, "_master_lock", False):
                 _LOGGER.debug("_turn_off_zone: master locked by program, not scheduling off")
             else:
-                def _delayed_off(_now):
+                async def _delayed_off(_now):
                     # If any zone became active, keep master on; otherwise turn off.
                     try:
                         any_active = any(z.get("active") for z in self._zones.values())
@@ -793,12 +815,12 @@ class EDry2Controller:
                             return
                         # Call master off
                         try:
-                            self._hass.async_create_task(self._hass.services.async_call(
+                            await self._hass.services.async_call(
                                 "switch",
                                 "turn_off",
                                 {"entity_id": self._master_switch_entity_id},
                                 blocking=False,
-                            ))
+                            )
                         except Exception:
                             _LOGGER.exception("_delayed_off: failed to call switch.turn_off")
                         try:

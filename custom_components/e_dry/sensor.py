@@ -9,7 +9,7 @@ from homeassistant.util.dt import as_local
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval, async_track_time_change
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -309,11 +309,9 @@ class EDry2ZonesInfoSensor(EDry2Sensor):
         await super().async_added_to_hass()
         signal = f"{DOMAIN}_zone_updated_{self._controller.entry_id}"
 
-        def _on_zone_update(*_):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("zones info: failed to schedule async_write_ha_state thread-safely")
+        @callback
+        def _on_zone_update(*_) -> None:
+            self.async_write_ha_state()
 
         self._signal_unsub = async_dispatcher_connect(self.hass, signal, _on_zone_update)
         if self._signal_unsub:
@@ -414,22 +412,25 @@ class EDry2ProgramsInfoSensor(EDry2Sensor):
         await super().async_added_to_hass()
         signal = f"{DOMAIN}_programs_updated_{self._controller.entry_id}"
 
-        def _on_programs_update(*_):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("programs info: failed to schedule async_write_ha_state thread-safely")
+        @callback
+        def _on_programs_update(*_) -> None:
+            self.async_write_ha_state()
 
         self._signal_unsub = async_dispatcher_connect(self.hass, signal, _on_programs_update)
         if self._signal_unsub:
             self.async_on_remove(self._signal_unsub)
         self._unsub = async_track_time_interval(
             self.hass,
-            lambda _now: self.async_write_ha_state(),
+            self._handle_interval_update,
             timedelta(seconds=5),
         )
         if self._unsub:
             self.async_on_remove(self._unsub)
+
+    @callback
+    def _handle_interval_update(self, _now: datetime) -> None:
+        """Write state from the Home Assistant event loop."""
+        self.async_write_ha_state()
 
 
 class EDry2EventLogSensor(EDry2Sensor):
@@ -458,11 +459,9 @@ class EDry2EventLogSensor(EDry2Sensor):
         await super().async_added_to_hass()
         signal = f"{DOMAIN}_eventlog_updated_{self._controller.entry_id}"
 
-        def _on_eventlog_update(*_):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("eventlog sensor: failed to schedule async_write_ha_state")
+        @callback
+        def _on_eventlog_update(*_) -> None:
+            self.async_write_ha_state()
 
         self._signal_unsub = async_dispatcher_connect(self.hass, signal, _on_eventlog_update)
         if self._signal_unsub:
@@ -499,6 +498,7 @@ class EDry2ZoneRemainingSensor(EDry2Sensor):
     async def _async_update_tick(self, now) -> None:
         self.async_write_ha_state()
 
+    @callback
     def _on_zone_update(self, zone_id) -> None:
         try:
             zid = int(zone_id)
@@ -511,11 +511,7 @@ class EDry2ZoneRemainingSensor(EDry2Sensor):
                 zone_id,
                 self.native_value,
             )
-            try:
-                # schedule state update thread-safely
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("remaining_sensor: failed to schedule async_write_ha_state thread-safely")
+            self.async_write_ha_state()
 
     @property
     def state(self) -> str | None:
@@ -573,17 +569,15 @@ class EDry2ProgramInfoSensor(EDry2Sensor):
         signal_specific = f"{DOMAIN}_program_updated_{self._controller.entry_id}_{self._program_id}"
         signal_generic = f"{DOMAIN}_programs_updated_{self._controller.entry_id}"
 
-        def _on_program_update(_data=None):
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("program sensor: failed to schedule async_write_ha_state")
+        @callback
+        def _on_program_update(_data=None) -> None:
+            self.async_write_ha_state()
 
         unsub1 = async_dispatcher_connect(self.hass, signal_specific, _on_program_update)
         unsub2 = async_dispatcher_connect(self.hass, signal_generic, _on_program_update)
         self._signal_unsub = (unsub1, unsub2)
-        self.async_on_remove(lambda: unsub1())
-        self.async_on_remove(lambda: unsub2())
+        self.async_on_remove(unsub1)
+        self.async_on_remove(unsub2)
 
     def _find_program(self) -> Dict[str, Any] | None:
         for p in self._controller.programs:
@@ -657,17 +651,14 @@ class EDry2ZoneDurationSensor(EDry2Sensor):
     def native_value(self) -> float | None:
         return self._controller.get_zone_duration(self._zone_id)
 
-    def _on_zone_update(self, zone_id):
+    @callback
+    def _on_zone_update(self, zone_id) -> None:
         try:
             zid = int(zone_id)
         except Exception:
             return
         if zid == self._zone_id:
-            # schedule state write on event loop thread
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                _LOGGER.exception("duration_sensor: failed to schedule async_write_ha_state thread-safely")
+            self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -796,16 +787,14 @@ class EDry2ZoneProgressSensor(EDry2Sensor):
     async def _async_update_tick(self, now) -> None:
         self.async_write_ha_state()
 
+    @callback
     def _on_zone_update(self, zone_id) -> None:
         try:
             zid = int(zone_id)
         except Exception:
             return
         if zid == self._zone_id:
-            try:
-                self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-            except Exception:
-                pass
+            self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -929,6 +918,7 @@ class EDry2SmartFactorSensor(EDry2Sensor):
         self._unsub = async_track_time_interval(
             self.hass, self._update, timedelta(minutes=5)
         )
+        self.async_on_remove(self._unsub)
 
     async def _update(self, *args):
         self.async_write_ha_state()
@@ -955,6 +945,7 @@ class EDry2SmartReasonSensor(EDry2Sensor):
         self._unsub = async_track_time_interval(
             self.hass, self._update, timedelta(minutes=5)
         )
+        self.async_on_remove(self._unsub)
 
     async def _update(self, *args):
         self.async_write_ha_state()
@@ -989,6 +980,7 @@ class EDry2WeatherStatusSensor(EDry2Sensor):
         self._unsub = async_track_time_interval(
             self.hass, self._update, timedelta(minutes=5)
         )
+        self.async_on_remove(self._unsub)
 
     async def _update(self, *args):
         self.async_write_ha_state()
@@ -1063,15 +1055,11 @@ class EDry2HistorySensor(RestoreEntity, EDry2Sensor):
         
         self._setup_reset_listener()
 
-    def _on_irrigation_finished(self, duration_sec):
+    @callback
+    def _on_irrigation_finished(self, duration_sec) -> None:
         minutes = float(duration_sec) / 60.0
         self._state += minutes
-        # Schedule state write safely on the event loop in case this
-        # callback is invoked from a worker thread.
-        try:
-            self.hass.loop.call_soon_threadsafe(self.async_write_ha_state)
-        except Exception:
-            _LOGGER.exception("_on_irrigation_finished: failed to schedule async_write_ha_state thread-safely")
+        self.async_write_ha_state()
 
     def _setup_reset_listener(self):
         raise NotImplementedError

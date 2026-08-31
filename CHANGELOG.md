@@ -1,5 +1,11 @@
 # Changelog
 
+## 10.1.4 - 2026-08-31
+
+- Corretti i callback timer/dispatcher che potevano chiamare `async_write_ha_state` da un executor.
+- Registrati i callback sincroni non bloccanti con `@callback` e rimossi i listener allo scaricamento.
+- Aggiunti test di regressione per verificare l'esecuzione degli aggiornamenti nell'event loop.
+
 ## 10.1.3 - 2026-06-05
 
 - SmartCalc usa anche `rain_today_mm`, raffica vento e `vpd_hpa` quando disponibili da e-SunMind.

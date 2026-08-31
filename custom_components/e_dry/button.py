@@ -39,14 +39,8 @@ class EDry2ProgramStopButton(ButtonEntity):
         self._attr_unique_id = f"{controller.entry_id}_program_{self._program_id}_stop"
 
     async def async_press(self) -> None:  # type: ignore[override]
-        _LOGGER.debug(
-            "ProgramStopButton: pressed for program %s, scheduling stop", self._program_id
-        )
+        _LOGGER.debug("ProgramStopButton: pressed for program %s", self._program_id)
         try:
-            self.hass.loop.call_soon_threadsafe(
-                lambda: self.hass.async_create_task(
-                    self._controller.stop_program(self._program_id)
-                )
-                )
+            await self._controller.stop_program(self._program_id)
         except Exception:
-            _LOGGER.exception("ProgramStopButton: failed to schedule stop_program task")
+            _LOGGER.exception("ProgramStopButton: failed to stop program")
