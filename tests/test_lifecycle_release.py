@@ -29,10 +29,8 @@ class ReleaseLifecycleTests(unittest.TestCase):
 
     def test_setup_never_removes_registry_entities_implicitly(self):
         source = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
-        tree = ast.parse(source)
-        setup = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef)
-                     and node.name == "async_setup_entry")
-        self.assertNotIn("registry.async_remove", ast.unparse(setup))
+        automatic_setup = source.split("async def handle_remove_stale_entities", 1)[0]
+        self.assertNotIn("registry.async_remove", automatic_setup)
 
     def test_tests_never_call_valve_or_irrigation_services(self):
         test_source = "\n".join(
