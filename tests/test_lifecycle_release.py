@@ -13,9 +13,19 @@ class ReleaseLifecycleTests(unittest.TestCase):
     def test_release_identity_and_official_assets(self):
         manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual((manifest["domain"], manifest["version"]), ("e_dry", "10.1.5"))
+        self.assertEqual(
+            manifest["issue_tracker"],
+            "https://github.com/edmondoalex/e-dry-irrigation-component/issues",
+        )
         expected = "f6e4e963300f68d1f5aca5343f66b979fd15bc26944f2195497728a317b79e5e"
         for relative in ("icon.png", "logo.png", "brand/icon.png", "brand/logo.png"):
             self.assertEqual(hashlib.sha256((COMPONENT / relative).read_bytes()).hexdigest(), expected)
+
+    def test_python_sources_are_plain_utf8_without_bom(self):
+        for path in COMPONENT.glob("*.py"):
+            raw = path.read_bytes()
+            self.assertFalse(raw.startswith(b"\xef\xbb\xbf"), path.name)
+            ast.parse(raw.decode("utf-8"), filename=str(path))
 
     def test_unload_removes_services_only_after_last_entry(self):
         source = (COMPONENT / "__init__.py").read_text(encoding="utf-8")
