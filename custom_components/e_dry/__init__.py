@@ -4,7 +4,6 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import Platform
-from homeassistant.helpers import entity_registry as er
 import logging
 
 from .const import DOMAIN
@@ -14,6 +13,11 @@ from .debug import setup_debug_logger
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.NUMBER, Platform.SENSOR, Platform.BUTTON]
+SERVICES = (
+    "start_zone", "start_zone_for", "stop_zone", "skip_program_zone", "stop_programs",
+    "update_program", "create_program", "update_zone", "update_weather_settings",
+    "update_zone_profiles", "remove_stale_entities", "request_event_log", "clear_event_log",
+)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -31,62 +35,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     controller = EDry2Controller(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = controller
-
-    # Cleanup stale entities for this config entry: compute the set of
-    # desired unique_ids based on current zones/programs and remove any
-    # registry entries that no longer match. This ensures that when a
-    # program or zone is deleted the old entities do not remain in the
-    # entity registry.
-    try:
-        registry = er.async_get(hass)
-        desired_ids: set[str] = set()
-
-        # Master program switch
-        desired_ids.add(f"{entry.entry_id}_programs_enabled_switch")
-        # Available zones sensor
-        desired_ids.add(f"{entry.entry_id}_available_zones")
-
-        # Zones
-        for z in controller.zones:
-            zid = int(z.get("id"))
-            desired_ids.add(f"{entry.entry_id}_zone_{zid}_switch")
-            desired_ids.add(f"{entry.entry_id}_zone_{zid}_duration")
-            desired_ids.add(f"{entry.entry_id}_zone_{zid}_configured_duration")
-            desired_ids.add(f"{entry.entry_id}_zone_{zid}_remaining")
-            desired_ids.add(f"{entry.entry_id}_zone_{zid}_progress")
-
-        # Programs
-        for p in controller.programs:
-            try:
-                pid = int(p.get("id") or 0)
-            except Exception:
-                continue
-            desired_ids.add(f"{entry.entry_id}_program_{pid}_schedule")
-            desired_ids.add(f"{entry.entry_id}_program_{pid}_enabled")
-            desired_ids.add(f"{entry.entry_id}_program_{pid}_stop")
-            desired_ids.add(f"{entry.entry_id}_program_{pid}_progress")
-            desired_ids.add(f"{entry.entry_id}_program_{pid}_stop")
-
-        # Iterate registry entries for this config entry and remove any
-        # whose unique_id is not in desired_ids.
-        entries = er.async_entries_for_config_entry(registry, entry.entry_id)
-        removed = []
-        for ent in list(entries):
-            try:
-                uid = getattr(ent, "unique_id", None)
-                if not uid:
-                    continue
-                # unique_id may have been stored as entry_id prefix earlier
-                if uid not in desired_ids:
-                    registry.async_remove(ent.entity_id)
-                    removed.append(ent.entity_id)
-            except Exception:  # pragma: no cover - defensive
-                _LOGGER.exception("Error cleaning stale entity %s", ent.entity_id)
-
-        if removed:
-            _LOGGER.info("Auto-cleaned %s stale entities for entry %s: %s", len(removed), entry.entry_id, removed)
-    except Exception:
-        _LOGGER.exception("Error during auto-clean of stale entities for entry %s", entry.entry_id)
 
     async def _options_updated(hass_: HomeAssistant, updated_entry: ConfigEntry) -> None:
         # When options change, reload the config entry so platforms and
@@ -213,6 +161,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         controller = hass.data[DOMAIN].pop(entry.entry_id, None)
         if controller is not None:
             controller.shutdown()
+        if not hass.data[DOMAIN]:
+            for service in SERVICES:
+                hass.services.async_remove(DOMAIN, service)
+            hass.data.pop(DOMAIN, None)
     return unload_ok
 
 

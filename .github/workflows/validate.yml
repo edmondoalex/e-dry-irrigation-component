@@ -1,0 +1,36 @@
+name: Validate integration
+
+on:
+  push:
+    branches:
+      - change-2026-026-edry-10.1.5
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hacs:
+    name: HACS Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          ignore: license description topics
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run official Hassfest image for the custom integration
+        run: >-
+          docker run --rm --entrypoint python
+          --workdir /usr/src/homeassistant
+          -v "${{ github.workspace }}:/github/workspace"
+          ghcr.io/home-assistant/hassfest
+          -m script.hassfest
+          --integration-path /github/workspace/custom_components/e_dry
+          --action validate
